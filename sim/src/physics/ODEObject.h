@@ -36,6 +36,8 @@
 
 #include <mars/interfaces/sim/NodeInterface.h>
 
+#include <memory>
+
 #ifndef ODE11
   #define dTriIndex int
 #endif
@@ -95,6 +97,9 @@ namespace mars {
       ODEObject(std::shared_ptr<interfaces::PhysicsInterface> world, interfaces::NodeData * nodeData);
       virtual ~ODEObject(void);
 
+      // create a polymorphic copy of the object
+      virtual ODEObject* clone() const = 0;
+
       virtual bool createNode(interfaces::NodeData *node) override;
       virtual bool changeNode(interfaces::NodeData *node) override;
       virtual bool createODEGeometry(interfaces::NodeData *node);       
@@ -150,8 +155,17 @@ namespace mars {
       void setProperties(interfaces::NodeData *node);
       void setInertiaMass(interfaces::NodeData *node);
     };
+/*
+inline void ODEObjectDeleter(ODEObject* p)
+{
+    p->deallocate();
+    return;
+}
+*/
 
-  } // end of namespace sim
+using ODEObjectPtr = std::unique_ptr<ODEObject>;
+
+} // end of namespace sim
 } // end of namespace mars
 
 #endif  // NODE_PHYSICS_H

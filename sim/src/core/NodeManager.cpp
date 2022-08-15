@@ -47,8 +47,15 @@
 
 #include <mars/utils/MutexLocker.h>
 
+#include <ObjectRepository.h>
+#include <CoreODEObjects.h>
+
 namespace mars {
-  namespace sim {
+namespace sim {
+
+    bool registerODEObject(){
+
+    }
 
     using namespace std;
     using namespace utils;
@@ -75,13 +82,19 @@ namespace mars {
         GraphicsUpdateInterface *gui = static_cast<GraphicsUpdateInterface*>(this);
         control->graphics->addGraphicsUpdateInterface(gui);
       }
-      odeObjectFactory = ODEObjectFactory::getInstance();
+
+    odeObjectTypeMapping[NODE_TYPE_BOX] = "ODEBox";
+    odeObjectTypeMapping[NODE_TYPE_CAPSULE] = "ODECapsule";
+    odeObjectTypeMapping[NODE_TYPE_CYLINDER] = "ODECylinder";
+    odeObjectTypeMapping[NODE_TYPE_TERRAIN] = "ODEHeightField";
+    odeObjectTypeMapping[NODE_TYPE_MESH] = "ODEMesh";
+    odeObjectTypeMapping[NODE_TYPE_PLANE] = "ODEPlane";
+    odeObjectTypeMapping[NODE_TYPE_SPHERE] = "ODESphere";
+
     }
 
     NodeManager::~NodeManager()
     {
-      std::cout << "Destroyed " << std::endl;  
-      delete odeObjectFactory;
     }
 
 
@@ -247,11 +260,56 @@ namespace mars {
       // create a node object
       std::shared_ptr<SimNode> newNode = make_shared<SimNode>(control, *nodeS);
 
-      // create the physical node data
-      if(! (nodeS->noPhysical)){
-        // create an interface object to the physics
-        std::shared_ptr<NodeInterface> newNodeInterface = odeObjectFactory->createObject(control->sim->getPhysics(), nodeS);   
-        std::cout << "DEBUGGG: create ODEObject pointer with odeObjectFactory in NodeManager " << __FILE__ << ":" << __LINE__ << std::endl;
+        // create the physical node data
+        if(! (nodeS->noPhysical)){
+
+          std::shared_ptr<NodeInterface> newNodeInterface; 
+
+          if (odeObjectTypeMapping.count(nodeS->physicMode) == 0){
+              // missing type in the object type mapping, so no physically node will be created
+              return 0;
+          }
+
+          if (ObjectRepository::Instance().hasKey(odeObjectTypeMapping[nodeS->physicMode])){
+
+            newNodeInterface = std::move(ObjectRepository::Instance().allocateObject(odeObjectTypeMapping[nodeS->physicMode]));
+          }
+          else{
+
+            switch(nodeS->physicMode) {
+            case NODE_TYPE_BOX:
+              ObjectRepository::Instance().registerObject(odeObjectTypeMapping[nodeS->physicMode], std::move(ODEObjectPtr(new ODEBox(control->sim->getPhysics(), nodeS))));
+              break;
+            case NODE_TYPE_CAPSULE:
+              ObjectRepository::Instance().registerObject(odeObjectTypeMapping[nodeS->physicMode], std::move(ODEObjectPtr(new ODECapsule(control->sim->getPhysics(), nodeS))));
+              break;
+            case NODE_TYPE_CYLINDER:
+              ObjectRepository::Instance().registerObject(odeObjectTypeMapping[nodeS->physicMode], std::move(ODEObjectPtr(new ODECylinder(control->sim->getPhysics(), nodeS))));
+              break;    
+            case NODE_TYPE_TERRAIN:
+              ObjectRepository::Instance().registerObject(odeObjectTypeMapping[nodeS->physicMode], std::move(ODEObjectPtr(new ODEHeightField(control->sim->getPhysics(), nodeS))));
+              break;        
+            case NODE_TYPE_MESH:
+              ObjectRepository::Instance().registerObject(odeObjectTypeMapping[nodeS->physicMode], std::move(ODEObjectPtr(new ODEMesh(control->sim->getPhysics(), nodeS))));
+              break;        
+            case NODE_TYPE_PLANE:
+              ObjectRepository::Instance().registerObject(odeObjectTypeMapping[nodeS->physicMode], std::move(ODEObjectPtr(new ODEPlane(control->sim->getPhysics(), nodeS))));
+              break;        
+            case NODE_TYPE_SPHERE:
+              ObjectRepository::Instance().registerObject(odeObjectTypeMapping[nodeS->physicMode], std::move(ODEObjectPtr(new ODESphere(control->sim->getPhysics(), nodeS))));
+              break;            
+            default:
+              // no correct type is specified, so no physically node will be created
+              return 0;
+              break;
+            }  
+            newNodeInterface = std::move(ObjectRepository::Instance().allocateObject(odeObjectTypeMapping[nodeS->physicMode]));
+          }
+  
+        for (auto val : ObjectRepository::Instance().getAllObjectNames())
+        {
+          std::cout << "Registered Object Name: " << val << std::endl;
+        }
 
         if (newNodeInterface.get() == nullptr) {
           // if no node was created in physics

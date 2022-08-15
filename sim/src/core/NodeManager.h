@@ -37,8 +37,8 @@
 #include <mars/interfaces/sim/ControlCenter.h>
 #include <mars/interfaces/sim/NodeManagerInterface.h>
 
-#include <ObjectFactoryInterface.h>
-#include <ODEObjectFactory.h>
+#include <string>
+#include <map>
 
 namespace mars {
   namespace sim {
@@ -166,8 +166,7 @@ namespace mars {
 
     private:
 
-      ObjectFactoryInterface* odeObjectFactory; 
-
+      std::map<interfaces::NodeType, std::string> odeObjectTypeMapping;
       interfaces::NodeId next_node_id;
       bool update_all_nodes;
       int visual_rep;
